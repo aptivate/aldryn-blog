@@ -14,6 +14,7 @@ else:
 user_orm_label = '%s.%s' % (User._meta.app_label, User._meta.object_name)
 user_model_label = '%s.%s' % (User._meta.app_label, User._meta.module_name)
 user_ptr_name = '%s_ptr' % User._meta.object_name.lower()
+user_field_name = User._meta.object_name.lower()
 
 
 class Migration(SchemaMigration):
@@ -24,9 +25,9 @@ class Migration(SchemaMigration):
         db.create_table(m2m_table_name, (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
             ('post', models.ForeignKey(orm[u'aldryn_blog.post'], null=False)),
-            ('user', models.ForeignKey(orm[user_model_label], null=False))
+            (user_field_name, models.ForeignKey(orm[user_model_label], null=False))
         ))
-        db.create_unique(m2m_table_name, ['post_id', 'user_id'])
+        db.create_unique(m2m_table_name, ['post_id', '%s_id' % user_field_name])
 
 
     def backwards(self, orm):
