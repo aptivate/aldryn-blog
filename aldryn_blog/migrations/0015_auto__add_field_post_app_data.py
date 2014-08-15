@@ -4,35 +4,19 @@ from south.db import db
 from south.v2 import SchemaMigration
 from django.db import models
 
-try:
-    from django.contrib.auth import get_user_model
-except ImportError: # django < 1.5
-    from django.contrib.auth.models import User
-else:
-    User = get_user_model()
-
-user_orm_label = '%s.%s' % (User._meta.app_label, User._meta.object_name)
-user_model_label = '%s.%s' % (User._meta.app_label, User._meta.module_name)
-user_ptr_name = '%s_ptr' % User._meta.object_name.lower()
-user_field_name = User._meta.object_name.lower()
-
 
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Adding M2M table for field coauthors on 'Post'
-        m2m_table_name = db.shorten_name(u'aldryn_blog_post_coauthors')
-        db.create_table(m2m_table_name, (
-            ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('post', models.ForeignKey(orm[u'aldryn_blog.post'], null=False)),
-            (user_field_name, models.ForeignKey(orm[user_model_label], null=False))
-        ))
-        db.create_unique(m2m_table_name, ['post_id', '%s_id' % user_field_name])
+        # Adding field 'Post.app_data'
+        db.add_column(u'aldryn_blog_post', 'app_data',
+                      self.gf('app_data.fields.AppDataField')(default='{}'),
+                      keep_default=False)
 
 
     def backwards(self, orm):
-        # Removing M2M table for field coauthors on 'Post'
-        db.delete_table(db.shorten_name(u'aldryn_blog_post_coauthors'))
+        # Deleting field 'Post.app_data'
+        db.delete_column(u'aldryn_blog_post', 'app_data')
 
 
     models = {
@@ -61,9 +45,10 @@ class Migration(SchemaMigration):
         },
         u'aldryn_blog.post': {
             'Meta': {'ordering': "['-publication_start']", 'object_name': 'Post'},
-            'author': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['%s']" % user_orm_label}),
+            'app_data': ('app_data.fields.AppDataField', [], {'default': "'{}'"}),
+            'author': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"}),
             'category': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['aldryn_blog.Category']", 'null': 'True', 'blank': 'True'}),
-            'coauthors': ('django.db.models.fields.related.ManyToManyField', [], {'blank': 'True', 'related_name': "'aldryn_blog_coauthors'", 'null': 'True', 'symmetrical': 'False', 'to': u"orm['%s']" % user_orm_label}),
+            'coauthors': ('django.db.models.fields.related.ManyToManyField', [], {'blank': 'True', 'related_name': "'aldryn_blog_coauthors'", 'null': 'True', 'symmetrical': 'False', 'to': u"orm['auth.User']"}),
             'content': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'aldryn_blog_posts'", 'null': 'True', 'to': "orm['cms.Placeholder']"}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'key_visual': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['filer.Image']", 'null': 'True', 'blank': 'True'}),
@@ -87,8 +72,8 @@ class Migration(SchemaMigration):
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '50'})
         },
-        user_model_label: {
-            'Meta': {'object_name': User.__name__, 'db_table': "'%s'" % User._meta.db_table},
+        u'auth.user': {
+            'Meta': {'object_name': 'User'},
             'date_joined': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
             'email': ('django.db.models.fields.EmailField', [], {'max_length': '75', 'blank': 'True'}),
             'first_name': ('django.db.models.fields.CharField', [], {'max_length': '30', 'blank': 'True'}),
@@ -143,7 +128,7 @@ class Migration(SchemaMigration):
             'modified_at': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '255', 'blank': 'True'}),
             'original_filename': ('django.db.models.fields.CharField', [], {'max_length': '255', 'null': 'True', 'blank': 'True'}),
-            'owner': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'owned_files'", 'null': 'True', 'to': u"orm['%s']" % user_orm_label}),
+            'owner': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'owned_files'", 'null': 'True', 'to': u"orm['auth.User']"}),
             'polymorphic_ctype': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'polymorphic_filer.file_set'", 'null': 'True', 'to': u"orm['contenttypes.ContentType']"}),
             'sha1': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '40', 'blank': 'True'}),
             'uploaded_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'})
@@ -156,7 +141,7 @@ class Migration(SchemaMigration):
             'lft': ('django.db.models.fields.PositiveIntegerField', [], {'db_index': 'True'}),
             'modified_at': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
-            'owner': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'filer_owned_folders'", 'null': 'True', 'to': u"orm['%s']" % user_orm_label}),
+            'owner': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'filer_owned_folders'", 'null': 'True', 'to': u"orm['auth.User']"}),
             'parent': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'children'", 'null': 'True', 'to': "orm['filer.Folder']"}),
             'rght': ('django.db.models.fields.PositiveIntegerField', [], {'db_index': 'True'}),
             'tree_id': ('django.db.models.fields.PositiveIntegerField', [], {'db_index': 'True'}),

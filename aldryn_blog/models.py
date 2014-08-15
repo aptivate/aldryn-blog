@@ -10,6 +10,7 @@ from django.template.defaultfilters import slugify
 from django.utils import timezone
 from django.utils.translation import get_language, ugettext_lazy as _, override
 
+from app_data import AppDataField
 from cms.utils.i18n import get_current_language
 from cms.models.fields import PlaceholderField
 from cms.models.pluginmodel import CMSPlugin
@@ -86,11 +87,12 @@ class RelatedManager(models.Manager):
     def filter_by_current_language(self):
         return self.filter_by_language(get_language())
 
-    def get_tags(self, language=None):
+    def get_tags(self, entries=None, language=None):
         """Returns tags used to tag post and its count. Results are ordered by count."""
 
-        # get tagged post
-        entries = self
+        if not entries:
+            entries = self
+
         if language:
             entries = entries.filter_by_language(language)
         entries = entries.distinct()
@@ -168,6 +170,7 @@ class Post(models.Model):
     objects = RelatedManager()
     published = PublishedManager()
     tags = TaggableManager(blank=True)
+    app_data = AppDataField()
 
     def __unicode__(self):
         return self.title
